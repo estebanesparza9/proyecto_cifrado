@@ -1,0 +1,176 @@
+<div class="min-vh-100 d-flex justify-content-center align-items-center py-5">
+  <div class="hx-shell">
+
+    <div class="mb-3 text-center titulo">
+      <div class="hx-headline">CONSOLA DE CIFRADO</div>
+      <div class="hx-sub">César / Atbash — ASCII charset</div>
+    </div>
+
+    <div class="hx-panel p-4">
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="hx-muted">
+          Status:
+          <span class="ms-2 fw-semibold" [class.hx-ok]="charsetListo" [class.hx-warn]="!charsetListo">
+            {{ charsetListo ? 'READY' : 'LOCKED' }}
+          </span>
+        </div>
+
+        @if (charsetConfirmado) {
+          <button
+            class="btn hx-btn-outline btn-sm btnCambiarAbc"
+            type="button"
+            [disabled]="loading"
+            (click)="cambiarCharset()"
+          >
+            Cambiar abecedario
+          </button>
+        }
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label hx-label abcDefine">DEFINE TU ALFABETO (CHARSET)</label>
+
+        <div class="d-flex gap-2">
+          <input
+            class="form-control hx-input"
+            [(ngModel)]="charset"
+            (ngModelChange)="onCharsetChange()"
+            [disabled]="charsetConfirmado || loading"
+            placeholder="Ej: abcde456781"
+          />
+
+          <button
+            class="btn hx-btn btnConfirm"
+            type="button"
+            (click)="confirmCharset()"
+            [disabled]="!puedeConfirmarCharset"
+          >
+            Confirmar
+          </button>
+        </div>
+
+        <div class="hx-muted mt-2 d-flex flex-wrap gap-3 long">
+          <span>Longitud: <span class="fw-semibold">{{ charsetLength }}</span></span>
+
+          @if (tieneRepetidos && !charsetConfirmado) {
+            <span class="hx-warn msjRepeat">Repetidos detectados (se eliminan).</span>
+          }
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-center mb-4">
+        <div class="hx-pill">
+          <button
+            type="button"
+            class="hx-pill-btn"
+            [class.active]="modo === 'cifrar'"
+            [disabled]="!charsetListo || loading"
+            (click)="seleccionarModo('cifrar')"
+          >
+            Cifrar
+          </button>
+
+          <button
+            type="button"
+            class="hx-pill-btn"
+            [class.active]="modo === 'descifrar'"
+            [disabled]="!charsetListo || loading"
+            (click)="seleccionarModo('descifrar')"
+          >
+            Descifrar
+          </button>
+        </div>
+      </div>
+
+      @if (!charsetListo) {
+        <div class="hx-warn text-center mb-3">
+          Para proceder, primero define y confirma el alfabeto a utilizar.
+        </div>
+      }
+
+      <div class="hx-divider my-3"></div>
+
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <label class="form-label hx-label">MÓDULO DE ENCRIPTACIÓN</label>
+
+          <select
+            class="form-select hx-input boxInput"
+            [(ngModel)]="tipoCifrado"
+            (ngModelChange)="alCambiarCifrado()"
+            [disabled]="!charsetListo || loading"
+          >
+            <option value="cesar">César</option>
+            <option value="atbash">Atbash</option>
+          </select>
+
+          @if (tipoCifrado === 'cesar') {
+            <div class="mt-3">
+              <label class="form-label hx-label">SHIFT (K)</label>
+              <input
+                class="form-control hx-input boxInput"
+                type="number"
+                [(ngModel)]="shift"
+                [disabled]="!charsetListo || loading"
+                min="0"
+              />
+              <div class="hx-muted mt-2">Se aplica (idx ± k) mod N sobre el charset.</div>
+            </div>
+          }
+        </div>
+
+        <div class="col-12 col-md-8">
+          <label class="form-label hx-label labelTextCifrado">
+            {{ modo === 'descifrar' ? 'TEXTO A DESCIFRAR' : 'TEXTO A CIFRAR' }}
+          </label>
+
+          <div class="hx-muted text-center mt-3" style="margin-bottom: 15px;">
+            Los caracteres fuera del charset se dejan igual.
+          </div>
+
+          <textarea
+            class="form-control hx-textarea"
+            rows="7"
+            [(ngModel)]="inputText"
+            (ngModelChange)="alEditarTexto()"
+            [disabled]="!charsetListo || !modo || loading"
+            placeholder="Pega aquí tu texto..."
+          ></textarea>
+
+          <div class="d-flex gap-2 align-items-center mt-3">
+            <button class="btn hx-btn" type="button" [disabled]="!puedeEjecutar" (click)="run()">
+              Ejecutar
+            </button>
+
+            @if (loading) {
+              <div class="hx-loading">
+                <span class="spinner-border spinner-border-sm"></span>
+                <span class="ms-2">{{ modo === 'descifrar' ? 'DESCIFRANDO' : 'CIFRANDO' }}...</span>
+              </div>
+            }
+          </div>
+
+          @if (mostrarResultado) {
+            <div class="mt-4 p-3 hx-panel-inner">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="hx-label">RESULTADO</div>
+                <button class="btn hx-btn-outline btn-sm" type="button" (click)="copiarResultado()">
+                  Copiar
+                </button>
+              </div>
+
+              <pre class="hx-pre">{{ outputText }}</pre>
+
+              @if (copiado) {
+                <div class="hx-ok mt-2">Copiado al portapapeles.</div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-footer></app-footer>

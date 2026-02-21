@@ -1,0 +1,56 @@
+/* You can add global styles to this file, and also import other style files */
+/*@import "bootstrap-icons/font/bootstrap-icons.css";*/
+
+:root{
+  --bg:#05090a;
+  --panel:#071214;
+  --neon:#19ff8a;
+  --neon2:#00d1ff;
+  --txt:#b8ffd7;
+}
+
+html,body{height:100%;}
+body{
+  background: radial-gradient(1200px 600px at 20% 10%, rgba(25,255,138,.08), transparent 60%),
+              radial-gradient(900px 500px at 80% 30%, rgba(0,209,255,.06), transparent 55%),
+              var(--bg);
+  color: var(--txt);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.hx-panel{
+  background: linear-gradient(180deg, rgba(7,18,20,.9), rgba(7,18,20,.65));
+  border: 1px solid rgba(25,255,138,.35);
+  box-shadow: 0 0 24px rgba(25,255,138,.08);
+  border-radius: 16px;
+}
+
+.hx-title{
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--neon);
+}
+
+.hx-input, .hx-textarea{
+  background: rgba(0,0,0,.35) !important;
+  border: 1px solid rgba(25,255,138,.35) !important;
+  color: var(--txt) !important;
+}
+
+.hx-input:focus, .hx-textarea:focus{
+  box-shadow: 0 0 0 .2rem rgba(25,255,138,.15) !important;
+  border-color: rgba(25,255,138,.7) !important;
+}
+
+.hx-btn{
+  border: 1px solid rgba(25,255,138,.6);
+  color: var(--neon);
+  background: rgba(0,0,0,.25);
+}
+
+.hx-btn.active{
+  background: rgba(25,255,138,.12);
+  box-shadow: 0 0 18px rgba(25,255,138,.12);
+}
+
+.hx-muted{ color: rgba(184,255,215,.65); }
