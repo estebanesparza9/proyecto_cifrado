@@ -5,16 +5,23 @@ import { Footer } from './components/footer/footer';
 
 type Modo = 'cifrar' | 'descifrar' | null;
 type CipherType = 'cesar' | 'atbash';
+type TipoDescifrado = 'manual' | 'detectar' | 'masa';
+
+interface CandidateResult {
+  tipo: CipherType;
+  shift?: number;
+  texto: string;
+  score: number;
+}
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule,Footer],
+  imports: [CommonModule, FormsModule, Footer],
   templateUrl: './app.html',
   styleUrls: ['./app.css'],
 })
 export class App {
-
   charset = '';
   charsetNormalizado = '';
   tieneRepetidos = false;
@@ -24,6 +31,7 @@ export class App {
 
   modo: Modo = null;
   tipoCifrado: CipherType = 'cesar';
+  tipoDescifrado: TipoDescifrado = 'manual';
   shift = 3;
 
   inputText = '';
@@ -33,37 +41,37 @@ export class App {
   copiado = false;
 
   mostrarResultado = false;
+  resultadosMasa: CandidateResult[] = [];
+  mostrarResultadosMasa = false;
+  infoDeteccion = '';
 
   constructor(private cdr: ChangeDetectorRef) {}
 
-  // FUNCION 1
   get charsetListo(): boolean {
     return this.charsetConfirmado && this.charsetNormalizado.length > 0;
   }
 
-  // FUNCION 2
   get charsetLength(): number {
     return this.charsetNormalizado.length;
   }
 
-  // FUNCION 3
   get puedeConfirmarCharset(): boolean {
     return !this.loading && !this.charsetConfirmado && this.charsetNormalizado.length > 0;
   }
 
-  // FUNCION 4
   get puedeEjecutar(): boolean {
     return this.charsetListo && !!this.modo && !this.loading && this.inputText.trim().length > 0;
   }
 
-  // FUNCION 5
   private ocultarResultado(): void {
     this.mostrarResultado = false;
     this.outputText = '';
     this.copiado = false;
+    this.resultadosMasa = [];
+    this.mostrarResultadosMasa = false;
+    this.infoDeteccion = '';
   }
 
-  // FUNCION 6
   onCharsetChange(): void {
     if (this.charsetConfirmado || this.charsetBloqueado) return;
 
@@ -100,81 +108,73 @@ export class App {
     this.cdr.detectChanges();
   }
 
-  // FUNCION 7
   confirmCharset(): void {
     if (!this.puedeConfirmarCharset) return;
 
     this.charsetConfirmado = true;
     this.charsetBloqueado = true;
-
     this.modo = null;
     this.inputText = '';
-
     this.ocultarResultado();
-
     this.cdr.detectChanges();
   }
 
-  // FUNCION 8
   seleccionarModo(m: Exclude<Modo, null>): void {
     if (!this.charsetListo || this.loading) return;
 
     this.modo = m;
-
     this.inputText = '';
+    this.tipoDescifrado = 'manual';
     this.ocultarResultado();
-
     this.cdr.detectChanges();
   }
 
-  // FUNCION 9
   alCambiarCifrado(): void {
     if (!this.charsetListo || this.loading) return;
 
     this.inputText = '';
     this.ocultarResultado();
-
     this.cdr.detectChanges();
   }
 
-  // FUNCION 10
+  alCambiarTipoDescifrado(): void {
+    if (!this.charsetListo || this.loading) return;
+
+    this.ocultarResultado();
+    this.cdr.detectChanges();
+  }
+
   alEditarTexto(): void {
     if (this.loading) return;
     this.ocultarResultado();
     this.cdr.detectChanges();
   }
 
-  // FUNCION 11
   cambiarCharset(): void {
     if (this.loading) return;
 
     this.charsetBloqueado = false;
     this.charsetConfirmado = false;
-
     this.modo = null;
     this.inputText = '';
-
+    this.tipoDescifrado = 'manual';
     this.ocultarResultado();
-
     this.cdr.detectChanges();
   }
 
-  // FUNCION 12
   sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  // FUNCION 13
   async run(): Promise<void> {
     if (!this.puedeEjecutar) return;
 
     this.loading = true;
-
     this.ocultarResultado();
     this.cdr.detectChanges();
 
     try {
-      await this.sleep(900);
+      await this.sleep(700);
 
       const text = this.inputText;
       const cs = this.charsetNormalizado;
@@ -182,17 +182,52 @@ export class App {
 
       if (N === 0) return;
 
-      if (this.tipoCifrado === 'atbash') {
-        this.outputText = this.atbash(text, cs);
-      } else {
-        const k = ((this.shift % N) + N) % N;
-        const signed = this.modo === 'cifrar' ? k : -k;
-        this.outputText = this.cesar(text, cs, signed);
+      if (this.modo === 'cifrar') {
+        if (this.tipoCifrado === 'atbash') {
+          this.outputText = this.atbash(text, cs);
+        } else {
+          const k = ((this.shift % N) + N) % N;
+          this.outputText = this.cesar(text, cs, k);
+        }
+
+        this.mostrarResultado = true;
+        this.cdr.detectChanges();
+        return;
       }
 
-      this.mostrarResultado = true;
-      this.cdr.detectChanges();
-    } catch (error) {
+      if (this.tipoDescifrado === 'manual') {
+        if (this.tipoCifrado === 'atbash') {
+          this.outputText = this.atbash(text, cs);
+        } else {
+          const k = ((this.shift % N) + N) % N;
+          this.outputText = this.cesar(text, cs, -k);
+        }
+
+        this.mostrarResultado = true;
+        this.cdr.detectChanges();
+        return;
+      }
+
+      if (this.tipoDescifrado === 'detectar') {
+        const mejor = this.detectarMejorCandidato(text, cs);
+
+        this.outputText = mejor.texto;
+        this.infoDeteccion =
+          mejor.tipo === 'atbash'
+            ? `Tipo detectado: Atbash | módulo ${N} | score ${mejor.score}`
+            : `Tipo detectado: César | módulo ${N} | shift ${mejor.shift} | score ${mejor.score}`;
+
+        this.mostrarResultado = true;
+        this.cdr.detectChanges();
+        return;
+      }
+
+      if (this.tipoDescifrado === 'masa') {
+        this.resultadosMasa = this.generarDescifradoEnMasa(text, cs);
+        this.mostrarResultadosMasa = true;
+        this.cdr.detectChanges();
+      }
+    } catch {
       this.outputText = 'Error al procesar';
       this.mostrarResultado = true;
       this.cdr.detectChanges();
@@ -202,43 +237,123 @@ export class App {
     }
   }
 
-  // FUNCION 14
   cesar(text: string, charset: string, k: number): string {
     const N = charset.length;
     let out = '';
+
     for (const ch of text) {
       const idx = charset.indexOf(ch);
       if (idx === -1) {
         out += ch;
         continue;
       }
+
       const j = (idx + k) % N;
       out += charset[(j + N) % N];
     }
+
     return out;
   }
 
-  // FUNCION 15
   atbash(text: string, charset: string): string {
     const N = charset.length;
     let out = '';
+
     for (const ch of text) {
       const idx = charset.indexOf(ch);
       if (idx === -1) {
         out += ch;
         continue;
       }
+
       out += charset[N - 1 - idx];
     }
+
     return out;
   }
 
-  // FUNCION 16
+  detectarMejorCandidato(text: string, charset: string): CandidateResult {
+    const candidatos: CandidateResult[] = [];
+    const N = charset.length;
+
+    const atbashTexto = this.atbash(text, charset);
+    candidatos.push({
+      tipo: 'atbash',
+      texto: atbashTexto,
+      score: this.scoreTexto(atbashTexto),
+    });
+
+    for (let k = 0; k < N; k++) {
+      const descifrado = this.cesar(text, charset, -k);
+      candidatos.push({
+        tipo: 'cesar',
+        shift: k,
+        texto: descifrado,
+        score: this.scoreTexto(descifrado),
+      });
+    }
+
+    candidatos.sort((a, b) => b.score - a.score);
+    return candidatos[0];
+  }
+
+  generarDescifradoEnMasa(text: string, charset: string): CandidateResult[] {
+    const resultados: CandidateResult[] = [];
+    const N = charset.length;
+
+    resultados.push({
+      tipo: 'atbash',
+      texto: this.atbash(text, charset),
+      score: this.scoreTexto(this.atbash(text, charset)),
+    });
+
+    for (let k = 0; k < N; k++) {
+      const descifrado = this.cesar(text, charset, -k);
+      resultados.push({
+        tipo: 'cesar',
+        shift: k,
+        texto: descifrado,
+        score: this.scoreTexto(descifrado),
+      });
+    }
+
+    return resultados.sort((a, b) => b.score - a.score);
+  }
+
+  scoreTexto(text: string): number {
+    const t = text.toLowerCase();
+
+    const palabrasComunes = [
+      ' de ', ' la ', ' el ', ' que ', ' y ', ' en ', ' los ', ' las ',
+      ' un ', ' una ', ' es ', ' se ', ' no ', ' por ', ' con ', ' para '
+    ];
+
+    let score = 0;
+
+    for (const palabra of palabrasComunes) {
+      const coincidencias = t.split(palabra).length - 1;
+      score += coincidencias * 8;
+    }
+
+    const vocales = (t.match(/[aeiouáéíóú]/g) || []).length;
+    const letras = (t.match(/[a-záéíóúñ]/g) || []).length;
+
+    if (letras > 0) {
+      const ratio = vocales / letras;
+      if (ratio >= 0.30 && ratio <= 0.60) {
+        score += 10;
+      }
+    }
+
+    return score;
+  }
+
   async copiarResultado(): Promise<void> {
     try {
       await navigator.clipboard.writeText(this.outputText);
       this.copiado = true;
       this.cdr.detectChanges();
+
       setTimeout(() => {
         this.copiado = false;
         this.cdr.detectChanges();
@@ -247,5 +362,11 @@ export class App {
       this.copiado = false;
       this.cdr.detectChanges();
     }
+  }
+
+  async copiarTexto(texto: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(texto);
+    } catch {}
   }
 }

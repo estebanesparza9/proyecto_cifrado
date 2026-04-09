@@ -93,30 +93,90 @@
 
       <div class="row g-3">
         <div class="col-12 col-md-4">
-          <label class="form-label hx-label">MÓDULO DE ENCRIPTACIÓN</label>
 
-          <select
-            class="form-select hx-input boxInput"
-            [(ngModel)]="tipoCifrado"
-            (ngModelChange)="alCambiarCifrado()"
-            [disabled]="!charsetListo || loading"
-          >
-            <option value="cesar">César</option>
-            <option value="atbash">Atbash</option>
-          </select>
+          @if (modo === 'cifrar') {
+            <label class="form-label hx-label">MÓDULO DE ENCRIPTACIÓN</label>
 
-          @if (tipoCifrado === 'cesar') {
-            <div class="mt-3">
-              <label class="form-label hx-label">SHIFT (K)</label>
-              <input
-                class="form-control hx-input boxInput"
-                type="number"
-                [(ngModel)]="shift"
-                [disabled]="!charsetListo || loading"
-                min="0"
-              />
-              <div class="hx-muted mt-2">Se aplica (idx ± k) mod N sobre el charset.</div>
-            </div>
+            <select
+              class="form-select hx-input boxInput"
+              [(ngModel)]="tipoCifrado"
+              (ngModelChange)="alCambiarCifrado()"
+              [disabled]="!charsetListo || loading"
+            >
+              <option value="cesar">César</option>
+              <option value="atbash">Atbash</option>
+            </select>
+
+            @if (tipoCifrado === 'cesar') {
+              <div class="mt-3">
+                <label class="form-label hx-label">SHIFT (K)</label>
+                <input
+                  class="form-control hx-input boxInput"
+                  type="number"
+                  [(ngModel)]="shift"
+                  [disabled]="!charsetListo || loading"
+                  min="0"
+                />
+                <div class="hx-muted mt-2">Se aplica (idx + k) mod N sobre el charset.</div>
+              </div>
+            }
+          }
+
+          @if (modo === 'descifrar') {
+            <label class="form-label hx-label">TIPO DE DESCIFRADO</label>
+
+            <select
+              class="form-select hx-input boxInput"
+              [(ngModel)]="tipoDescifrado"
+              (ngModelChange)="alCambiarTipoDescifrado()"
+              [disabled]="!charsetListo || loading"
+            >
+              <option value="manual">Manual</option>
+              <option value="detectar">Detectar tipo automáticamente</option>
+              <option value="masa">Descifrar en masa</option>
+            </select>
+
+            @if (tipoDescifrado === 'manual') {
+              <div class="mt-3">
+                <label class="form-label hx-label">MÓDULO</label>
+
+                <select
+                  class="form-select hx-input boxInput"
+                  [(ngModel)]="tipoCifrado"
+                  (ngModelChange)="alCambiarCifrado()"
+                  [disabled]="!charsetListo || loading"
+                >
+                  <option value="cesar">César</option>
+                  <option value="atbash">Atbash</option>
+                </select>
+              </div>
+
+              @if (tipoCifrado === 'cesar') {
+                <div class="mt-3">
+                  <label class="form-label hx-label">SHIFT (K)</label>
+                  <input
+                    class="form-control hx-input boxInput"
+                    type="number"
+                    [(ngModel)]="shift"
+                    [disabled]="!charsetListo || loading"
+                    min="0"
+                  />
+                  <div class="hx-muted mt-2">Se aplica (idx - k) mod N sobre el charset.</div>
+                </div>
+              }
+            }
+
+            @if (tipoDescifrado === 'detectar') {
+              <div class="hx-muted mt-3">
+                Se probarán automáticamente Atbash y todas las rotaciones César posibles.
+              </div>
+            }
+
+            @if (tipoDescifrado === 'masa') {
+              <div class="hx-muted mt-3">
+                Se mostrarán todas las soluciones posibles ordenadas por score.
+              </div>
+            }
           }
         </div>
 
@@ -146,7 +206,9 @@
             @if (loading) {
               <div class="hx-loading">
                 <span class="spinner-border spinner-border-sm"></span>
-                <span class="ms-2">{{ modo === 'descifrar' ? 'DESCIFRANDO' : 'CIFRANDO' }}...</span>
+                <span class="ms-2">
+                  {{ modo === 'descifrar' ? 'DESCIFRANDO' : 'CIFRANDO' }}...
+                </span>
               </div>
             }
           </div>
@@ -160,10 +222,44 @@
                 </button>
               </div>
 
+              @if (infoDeteccion) {
+                <div class="hx-muted mb-2">{{ infoDeteccion }}</div>
+              }
+
               <pre class="hx-pre">{{ outputText }}</pre>
 
               @if (copiado) {
                 <div class="hx-ok mt-2">Copiado al portapapeles.</div>
+              }
+            </div>
+          }
+
+          @if (mostrarResultadosMasa) {
+            <div class="mt-4 p-3 hx-panel-inner">
+              <div class="hx-label mb-3">RESULTADOS EN MASA</div>
+
+              @for (item of resultadosMasa; track $index) {
+                <div class="mb-3 p-3 border rounded">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="hx-muted">
+                      @if (item.tipo === 'atbash') {
+                        <span>Atbash | score {{ item.score }}</span>
+                      } @else {
+                        <span>César | shift {{ item.shift }} | score {{ item.score }}</span>
+                      }
+                    </div>
+
+                    <button
+                      class="btn hx-btn-outline btn-sm"
+                      type="button"
+                      (click)="copiarTexto(item.texto)"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+
+                  <pre class="hx-pre">{{ item.texto }}</pre>
+                </div>
               }
             </div>
           }
